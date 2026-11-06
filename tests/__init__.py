@@ -1,1 +1,1 @@
-"""Automated pytest unit test suite for RussianNewsNLP."""
+"""Пакет модульных тестов проекта."""

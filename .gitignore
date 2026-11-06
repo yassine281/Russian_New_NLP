@@ -1,18 +1,8 @@
-# Virtual Environment
 .venv/
-venv/
-ENV/
-
-# Python Bytecode & Cache
+.venv312/
 __pycache__/
 *.py[cod]
-*$py.class
 .pytest_cache/
-
-# PyCharm IDE Files
 .idea/
-
-# Runtime Logs and Cached Data
 logs/*.log
 data/cache/*
-!data/cache/.gitkeep

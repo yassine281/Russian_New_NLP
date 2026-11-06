@@ -71,7 +71,7 @@
 ---
 
 ### 9. Обзор программной реализации
-Исходный код разделён на 7 профильных пакетов: `models`, `scraping`, `preprocessing`, `analysis`, `visualization`, `export`, `pipeline` и покрыт модульными тестами `pytest` в пакете `tests`.
+Исходный код разделён на 7 профильных пакетов: `models`, `test_scraping.py`, `preprocessing`, `analysis`, `visualization`, `export`, `pipeline` и покрыт модульными тестами `pytest` в пакете `tests`.
 
 ---
 

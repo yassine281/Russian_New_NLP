@@ -1,10 +1,6 @@
-"""Paquet models exposant les entites de domaine Article, ProcessedArticle et FrequencyEntry."""
+"""Пакет моделей данных проекта."""
 
 from models.article import Article, ProcessedArticle
 from models.frequency import FrequencyEntry
 
-__all__ = [
-    "Article",
-    "FrequencyEntry",
-    "ProcessedArticle",
-]
+__all__ = ["Article", "ProcessedArticle", "FrequencyEntry"]

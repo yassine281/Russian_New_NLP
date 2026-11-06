@@ -1,16 +1,10 @@
-"""Preprocessing package exposing cleaners, tokenizers, lemmatizers, stemmer, and stop-word filters."""
+"""Пакет предобработки текста."""
 
 from preprocessing.cleaner import TextCleaner
-from preprocessing.lemmatizers import (
-    BaseLemmatizer,
-    MystemLemmatizer,
-    PyMorphyLemmatizer,
-    SpacyLemmatizer,
-)
+from preprocessing.lemmatizers import PyMorphyLemmatizer, SpacyLemmatizer
 from preprocessing.stemmer import SnowballStemmerWrapper
-from preprocessing.stopwords import StopWordFilter, StopWordStats
+from preprocessing.stopwords import StopWordFilter
 from preprocessing.tokenizers import (
-    BaseTokenizer,
     NLTKTokenizer,
     SimpleTokenizer,
     SpacyTokenizer,
@@ -18,9 +12,6 @@ from preprocessing.tokenizers import (
 )
 
 __all__ = [
-    "BaseLemmatizer",
-    "BaseTokenizer",
-    "MystemLemmatizer",
     "NLTKTokenizer",
     "PyMorphyLemmatizer",
     "SimpleTokenizer",
@@ -28,7 +19,6 @@ __all__ = [
     "SpacyLemmatizer",
     "SpacyTokenizer",
     "StopWordFilter",
-    "StopWordStats",
     "TextCleaner",
     "TokenizerFactory",
 ]
