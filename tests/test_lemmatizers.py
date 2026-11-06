@@ -85,7 +85,7 @@ def test_optional_mystem_adapter_graceful_behavior() -> None:
 def test_lemmatizers_and_stemmer_edge_cases() -> None:
     """Verify empty strings, whitespace, and uppercase tokens are handled safely."""
     pymorphy = PyMorphyLemmatizer()
-    spacy_lem = SpacyLemmatizer()
+    SpacyLemmatizer()
     stemmer = SnowballStemmerWrapper()
 
     assert pymorphy.lemmatize_token("") == ""

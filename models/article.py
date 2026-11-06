@@ -1,39 +1,44 @@
-"""Domain data models for raw and preprocessed Russian news articles.
-
-This module implements immutable dataclasses representing raw scraped news
-articles (`Article`) and linguistically enriched documents (`ProcessedArticle`).
-"""
+"""Modeles de donnees immuables pour les articles de presse russes bruts et pretraites."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
-from typing import Any, Dict, List, Optional, Tuple
+import hashlib
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
+from typing import Any, Optional
+
+
+def _default_timestamp() -> str:
+    """Genere un horodatage ISO-8601 UTC pour la collecte d'un article."""
+    return datetime.now(timezone.utc).isoformat()
 
 
 @dataclass(frozen=True)
 class Article:
-    """Immutable representation of a raw Russian news article.
+    """Represente un article de presse russe brut collecte depuis une source publique.
 
     Attributes:
-        url: Source URL of the article.
-        title: Headline title of the article.
-        text: Full main body text of the article.
-        date: Publication date string (ISO or source format), if available.
-        source: Domain identifier of the news agency (e.g., 'lenta.ru').
+        url: Adresse URL complete de l'article.
+        title: Titre principal de l'article.
+        text: Contenu textuel complet de l'article.
+        date: Date de publication extraite (optionnelle).
+        source: Nom du media source (ex. 'Lenta.ru', 'РИА Новости').
+        article_id: Identifiant unique deterministe base sur l'URL normalisee.
+        collected_at: Horodatage ISO-8601 du moment de la collecte.
+        status: Statut de collecte ('collected' par defaut).
     """
 
     url: str
     title: str
     text: str
     date: Optional[str] = None
-    source: str = "unknown"
+    source: str = "Unknown"
+    article_id: str = ""
+    collected_at: str = field(default_factory=_default_timestamp)
+    status: str = "collected"
 
     def __post_init__(self) -> None:
-        """Validate required fields upon instantiation.
-
-        Raises:
-            ValueError: If url, title, or text is empty or non-string.
-        """
+        """Valide les champs obligatoires et normalise les chaines de caracteres."""
         if not isinstance(self.url, str) or not self.url.strip():
             raise ValueError("Article 'url' must be a non-empty string.")
         if not isinstance(self.title, str) or not self.title.strip():
@@ -43,145 +48,116 @@ class Article:
         if not isinstance(self.source, str) or not self.source.strip():
             raise ValueError("Article 'source' must be a non-empty string.")
 
+        clean_url = self.url.strip()
+        clean_title = self.title.strip()
+        clean_text = self.text.strip()
+        clean_source = self.source.strip()
+        clean_date = (
+            self.date.strip()
+            if isinstance(self.date, str) and self.date.strip()
+            else None
+        )
+
+        computed_id = (
+            self.article_id.strip()
+            if isinstance(self.article_id, str) and self.article_id.strip()
+            else hashlib.sha1(clean_url.lower().encode("utf-8")).hexdigest()[:12]
+        )
+
+        object.__setattr__(self, "url", clean_url)
+        object.__setattr__(self, "title", clean_title)
+        object.__setattr__(self, "text", clean_text)
+        object.__setattr__(self, "source", clean_source)
+        object.__setattr__(self, "date", clean_date)
+        object.__setattr__(self, "article_id", computed_id)
+
     @property
     def word_count(self) -> int:
-        """Calculate the whitespace-delimited word count of the raw article text.
-
-        Returns:
-            Number of words in the article text.
-        """
+        """Retourne le nombre de mots de l'article par decoupage sur les espaces."""
         return len(self.text.split())
 
-    def to_dict(self) -> Dict[str, Any]:
-        """Serialize the Article instance into a JSON-compatible dictionary.
-
-        Returns:
-            Dictionary containing article attributes and computed word_count.
-        """
+    def to_dict(self) -> dict[str, Any]:
+        """Convertit l'instance Article en dictionnaire serialisable en JSON."""
         return {
+            "article_id": self.article_id,
             "url": self.url,
             "title": self.title,
             "text": self.text,
             "date": self.date,
             "source": self.source,
             "word_count": self.word_count,
+            "collected_at": self.collected_at,
+            "status": self.status,
         }
 
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]) -> Article:
-        """Deserialize an Article instance from a dictionary.
-
-        Args:
-            data: Dictionary containing raw article fields.
-
-        Returns:
-            Validated Article instance.
-
-        Raises:
-            ValueError: If required keys are missing or invalid.
-        """
+    def from_dict(cls, data: dict[str, Any]) -> Article:
+        """Reconstruit une instance Article a partir d'un dictionnaire JSON."""
         if not isinstance(data, dict):
-            raise ValueError("Input data for Article.from_dict must be a dictionary.")
+            raise ValueError("Input 'data' must be a dictionary.")
         return cls(
-            url=str(data.get("url", "")).strip(),
-            title=str(data.get("title", "")).strip(),
-            text=str(data.get("text", "")).strip(),
-            date=str(data["date"]).strip() if data.get("date") else None,
-            source=str(data.get("source", "unknown")).strip() or "unknown",
-        )
-
-    def __repr__(self) -> str:
-        """Return an unambiguous developer representation of the Article."""
-        short_title = (
-            self.title[:40] + "..." if len(self.title) > 40 else self.title
-        )
-        return (
-            f"Article(source={self.source!r}, url={self.url!r}, "
-            f"title={short_title!r}, word_count={self.word_count})"
+            url=str(data.get("url", "")),
+            title=str(data.get("title", "")),
+            text=str(data.get("text", "")),
+            date=str(data["date"]) if data.get("date") is not None else None,
+            source=str(data.get("source") or "Unknown"),
+            article_id=str(data.get("article_id") or ""),
+            collected_at=str(data.get("collected_at") or _default_timestamp()),
+            status=str(data.get("status") or "collected"),
         )
 
     def __str__(self) -> str:
-        """Return a readable summary string of the Article."""
-        date_part = f" [{self.date}]" if self.date else ""
-        return f"[{self.source}]{date_part} {self.title} ({self.word_count} words)"
+        """Representation lisible de l'article."""
+        return f"[{self.source}] {self.title} ({self.word_count} words) - {self.url}"
+
+    def __repr__(self) -> str:
+        """Representation technique detaillee de l'article."""
+        return (
+            f"Article(article_id={self.article_id!r}, source={self.source!r}, "
+            f"title={self.title[:40]!r}, word_count={self.word_count}, url={self.url!r})"
+        )
 
 
 @dataclass(frozen=True)
 class ProcessedArticle:
-    """Immutable representation of an article after NLP preprocessing stages.
-
-    Uses tuples internally to preserve true immutability while providing
-    convenient factory and update methods via `dataclasses.replace()`.
+    """Represente un article enrichi par toutes les etapes de pretraitement NLP.
 
     Attributes:
-        article: Original immutable Article instance.
-        clean_text: Normalized lowercase Russian text.
-        tokens: Tokens produced by SimpleTokenizer.
-        nltk_tokens: Tokens produced by NLTKTokenizer.
-        spacy_tokens: Tokens produced by SpacyTokenizer.
-        pymorphy_lemmas: Lemmas produced by PyMorphyLemmatizer.
-        spacy_lemmas: Lemmas produced by SpacyLemmatizer.
-        snowball_stems: Stems produced by SnowballStemmerWrapper.
-        filtered_lemmas: Primary lemmas after stop-word removal.
+        article: Instance Article brute d'origine.
+        clean_text: Texte nettoye et normalise en minuscules.
+        tokens: Tokens issus de SimpleTokenizer (.split()).
+        nltk_tokens: Tokens issus de NLTK word_tokenize.
+        spacy_tokens: Tokens issus de SpacyTokenizer.
+        pymorphy_lemmas: Lemmes produits par Pymorphy3.
+        spacy_lemmas: Lemmes produits par spaCy (ru_core_news_sm).
+        snowball_stems: Racines produites par NLTK SnowballStemmer.
+        filtered_lemmas: Lemmes finaux apres suppression des mots vides (stop words).
     """
 
     article: Article
-    clean_text: str = ""
-    tokens: Tuple[str, ...] = field(default_factory=tuple)
-    nltk_tokens: Tuple[str, ...] = field(default_factory=tuple)
-    spacy_tokens: Tuple[str, ...] = field(default_factory=tuple)
-    pymorphy_lemmas: Tuple[str, ...] = field(default_factory=tuple)
-    spacy_lemmas: Tuple[str, ...] = field(default_factory=tuple)
-    snowball_stems: Tuple[str, ...] = field(default_factory=tuple)
-    filtered_lemmas: Tuple[str, ...] = field(default_factory=tuple)
+    clean_text: str
+    tokens: list[str] = field(default_factory=list)
+    nltk_tokens: list[str] = field(default_factory=list)
+    spacy_tokens: list[str] = field(default_factory=list)
+    pymorphy_lemmas: list[str] = field(default_factory=list)
+    spacy_lemmas: list[str] = field(default_factory=list)
+    snowball_stems: list[str] = field(default_factory=list)
+    filtered_lemmas: list[str] = field(default_factory=list)
 
     def __post_init__(self) -> None:
-        """Validate types and convert any list sequences into immutable tuples.
-
-        Raises:
-            TypeError: If `article` is not an Article instance.
-        """
+        """Verifie la validite de l'article source."""
         if not isinstance(self.article, Article):
-            raise TypeError(
-                f"Expected 'article' to be an Article instance, got {type(self.article).__name__}."
-            )
+            raise TypeError("ProcessedArticle 'article' must be an Article instance.")
         if not isinstance(self.clean_text, str):
-            raise TypeError("'clean_text' must be a string.")
+            raise TypeError("ProcessedArticle 'clean_text' must be a string.")
 
-        # Coerce any passed lists to tuples to guarantee deep immutability
-        sequence_fields = (
-            "tokens",
-            "nltk_tokens",
-            "spacy_tokens",
-            "pymorphy_lemmas",
-            "spacy_lemmas",
-            "snowball_stems",
-            "filtered_lemmas",
-        )
-        for field_name in sequence_fields:
-            val = getattr(self, field_name)
-            if isinstance(val, list):
-                object.__setattr__(self, field_name, tuple(val))
-            elif not isinstance(val, tuple):
-                raise TypeError(f"Field '{field_name}' must be a list or tuple of strings.")
+    @property
+    def filtered_word_count(self) -> int:
+        """Retourne le nombre de lemmes apres filtrage des mots vides."""
+        return len(self.filtered_lemmas)
 
-    def with_updates(self, **kwargs: Any) -> ProcessedArticle:
-        """Create a new ProcessedArticle with updated fields without mutating self.
-
-        Args:
-            **kwargs: Fields to update on the new ProcessedArticle copy.
-
-        Returns:
-            New ProcessedArticle instance with updated values.
-        """
-        return replace(self, **kwargs)
-
-    def to_csv_row(self) -> Dict[str, str]:
-        """Serialize fields required for corpus_processed.csv export.
-
-        Returns:
-            Dictionary with 'url', 'title', 'clean', and 'lemmas_filtered'.
-        """
+    def to_csv_row(self) -> dict[str, str]:
+        """Retourne les colonnes requises pour l'export corpus_processed.csv."""
         return {
             "url": self.article.url,
             "title": self.article.title,
@@ -189,17 +165,9 @@ class ProcessedArticle:
             "lemmas_filtered": " ".join(self.filtered_lemmas),
         }
 
-    def __repr__(self) -> str:
-        """Return developer representation of the ProcessedArticle."""
-        return (
-            f"ProcessedArticle(url={self.article.url!r}, "
-            f"tokens={len(self.tokens)}, "
-            f"filtered_lemmas={len(self.filtered_lemmas)})"
-        )
-
     def __str__(self) -> str:
-        """Return readable summary of the ProcessedArticle."""
+        """Representation lisible de l'article pretraite."""
         return (
-            f"ProcessedArticle({self.article.title[:35]!r}: "
-            f"{len(self.tokens)} raw tokens -> {len(self.filtered_lemmas)} filtered lemmas)"
+            f"ProcessedArticle(title={self.article.title[:35]!r}, "
+            f"tokens={len(self.tokens)}, filtered_lemmas={len(self.filtered_lemmas)})"
         )

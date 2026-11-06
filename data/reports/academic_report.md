@@ -76,7 +76,7 @@
 ---
 
 ### 10. Экспериментальное сравнение токенизаторов
-Время пакетной обработки подвыборки статей: **SimpleTokenizer**: 0.46 мс, **NLTKTokenizer**: 39.32 мс, **SpacyTokenizer**: 67.26 мс.
+Время пакетной обработки подвыборки статей: **SimpleTokenizer**: 0.37 мс, **NLTKTokenizer**: 37.16 мс, **SpacyTokenizer**: 58.53 мс.
 
 #### Статья 1: ««АвтоВАЗ» решил продлить распродажу машин Lada»
 - **URL**: `https://lenta.ru/news/2026/11/05/avtovaz-reshil-prodlit-rasprodazhu-mashin-lada/`
@@ -132,7 +132,7 @@
 | температура | температура | температура | температур | N/A (not installed) |
 | студенты | студент | студент | студент | N/A (not installed) |
 
-- **Время обработки батча**: `Pymorphy3` = 0.08 мс, `spaCy` = 39.60 мс, `SnowballStemmer` = 0.06 мс.
+- **Время обработки батча**: `Pymorphy3` = 0.06 мс, `spaCy` = 31.96 мс, `SnowballStemmer` = 0.06 мс.
 - **Статус адаптера Mystem**: Mystem optional adapter not active: pymystem3/Mystem binary not installed in current environment (No module named 'pymystem3').
 
 **Аналитический вывод по морфологии:**
